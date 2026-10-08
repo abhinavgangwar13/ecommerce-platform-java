@@ -237,4 +237,11 @@ public class AdminDashboardIntegrationTest {
                 .andExpect(jsonPath("$.recentUsers[0].email").isNotEmpty())
                 .andExpect(jsonPath("$.recentUsers[0].role").isNotEmpty());
     }
+
+    @Test
+    @DisplayName("10. Static admin-dashboard.html is accessible publicly and returns HTTP 200")
+    void testAdminDashboardHtmlAvailable() throws Exception {
+        mockMvc.perform(get("/admin-dashboard.html"))
+                .andExpect(status().isOk());
+    }
 }

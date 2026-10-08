@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Online E-Commerce Platform</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+    <!-- Immediate Authentication Guard for ADMIN Role -->
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr) {
+                window.location.replace('login.html');
+                return;
+            }
+            try {
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'ADMIN') {
+                    if (user && user.role === 'SELLER') {
+                        window.location.replace('seller-dashboard.html');
+                    } else if (user && user.role === 'BUYER') {
+                        window.location.replace('buyer-dashboard.html');
+                    } else {
+                        window.location.replace('index.html');
+                    }
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+</head>
+<body class="bg-light">
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="bi bi-shop me-2 text-primary fs-4"></i>
+                <span>E-Commerce Platform</span>
+                <span class="badge bg-danger ms-2 px-2 py-1 small">ADMIN</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active fw-semibold" aria-current="page" href="admin-dashboard.html">
+                            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.html">
+                            <i class="bi bi-grid me-1"></i> Public Catalog
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#jdbc-section">
+                            <i class="bi bi-database me-1"></i> JDBC Stats
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-light">
+                        <i class="bi bi-shield-lock-fill text-danger me-1 fs-5 align-middle"></i>
+                        <span id="nav-user-name" class="fw-semibold">Admin</span>
+                        <span id="nav-user-role" class="badge bg-danger ms-1">ADMIN</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-sm btn-outline-danger" onclick="Auth.logout()">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="py-4">
+        <div class="container">
+
+            <!-- Loading Spinner State -->
+            <div id="loading-state" class="text-center py-5">
+                <div class="spinner-border text-danger" style="width: 3.5rem; height: 3.5rem;" role="status">
+                    <span class="visually-hidden">Loading admin dashboard...</span>
+                </div>
+                <p class="mt-3 text-muted fw-semibold fs-5">Loading platform administration metrics...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="text-center py-5 d-none">
+                <div class="card border-0 shadow-sm rounded-4 p-5 mx-auto" style="max-width: 540px;">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 3.5rem;"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-2">Unable to Load Dashboard</h4>
+                    <p id="error-message" class="text-muted mb-4">
+                        An error occurred while loading administrative statistics. Please verify your credentials or server status.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-danger px-4" onclick="loadDashboard()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Try Again
+                        </button>
+                        <button class="btn btn-outline-secondary px-4" onclick="Auth.logout()">
+                            <i class="bi bi-box-arrow-right me-1"></i> Sign In Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content (hidden during loading) -->
+            <div id="dashboard-content" class="d-none">
+
+                <!-- Welcome Header Banner -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center bg-white p-4 rounded-3 shadow-sm mb-4 border">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-danger px-2.5 py-1 text-uppercase">Administration</span>
+                            <span class="text-muted small">System Overview</span>
+                        </div>
+                        <h2 class="fw-bold mb-1 text-dark">
+                            Welcome, <span id="admin-name" class="text-danger">Admin</span>!
+                        </h2>
+                        <p class="text-muted mb-0 small">
+                            <i class="bi bi-envelope me-1"></i><span id="admin-email">admin@demo.com</span> &bull; Full administrative platform oversight
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2 mt-3 mt-md-0">
+                        <button class="btn btn-outline-primary shadow-sm" onclick="loadDashboard()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh Data
+                        </button>
+                        <a href="products.html" class="btn btn-primary shadow-sm">
+                            <i class="bi bi-grid me-1"></i> View Catalog
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Section 1: User Analytics Cards -->
+                <div class="mb-2">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center">
+                        <i class="bi bi-people-fill text-primary me-2"></i> User Ecosystem Analytics
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <!-- Total Users -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Users</h6>
+                                        <h3 id="stat-total-users" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Buyers -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-person-badge"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Buyers</h6>
+                                        <h3 id="stat-total-buyers" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Sellers -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-warning bg-opacity-10 text-warning p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-shop-window"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Sellers</h6>
+                                        <h3 id="stat-total-sellers" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Admins -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Administrators</h6>
+                                        <h3 id="stat-total-admins" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Marketplace & Financial Metrics Cards -->
+                <div class="mb-2">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center">
+                        <i class="bi bi-graph-up-arrow text-success me-2"></i> Catalog &amp; Financial Overview
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <!-- Total Products -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Products</h6>
+                                        <h3 id="stat-total-products" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Stock -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-layers"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Units in Stock</h6>
+                                        <h3 id="stat-total-stock" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Orders -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-bag-check"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Orders</h6>
+                                        <h3 id="stat-total-orders" class="fw-bold text-dark mb-0">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Order Amount -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3 d-flex align-items-center">
+                                    <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 me-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-currency-rupee"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Gross Order Amount</h6>
+                                        <h3 id="stat-total-amount" class="fw-bold text-dark mb-0">₹0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Tables Row (Latest 5 Orders & Latest 5 Users) -->
+                <div class="row g-4 mb-4">
+                    <!-- Latest 5 Orders Table -->
+                    <div class="col-12 col-xl-7">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark">
+                                        <i class="bi bi-clock-history text-primary me-2"></i> Latest 5 Orders
+                                    </h5>
+                                    <small class="text-muted">Most recent purchase transactions platform-wide</small>
+                                </div>
+                                <span class="badge bg-light text-secondary border px-3 py-2">System-wide</span>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div id="orders-table-wrapper" class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="ps-3 py-3">Order ID</th>
+                                                <th class="py-3">Buyer</th>
+                                                <th class="py-3">Date</th>
+                                                <th class="py-3">Status</th>
+                                                <th class="text-end pe-3 py-3">Total Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-orders-tbody">
+                                            <!-- Dynamic rows populated via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Empty State for Orders -->
+                                <div id="no-orders-container" class="text-center py-5 d-none">
+                                    <div class="mb-2 text-muted">
+                                        <i class="bi bi-bag-x fs-1"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark">No Orders Placed Yet</h6>
+                                    <p class="text-muted small mb-0">Orders will appear here as soon as buyers checkout.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Latest 5 Users Table -->
+                    <div class="col-12 col-xl-5">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark">
+                                        <i class="bi bi-person-lines-fill text-danger me-2"></i> Latest 5 Users
+                                    </h5>
+                                    <small class="text-muted">Recently registered accounts</small>
+                                </div>
+                                <span class="badge bg-light text-secondary border px-3 py-2">Registered</span>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div id="users-table-wrapper" class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="ps-3 py-3">User</th>
+                                                <th class="py-3">Role</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-users-tbody">
+                                            <!-- Dynamic rows populated via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Empty State for Users -->
+                                <div id="no-users-container" class="text-center py-5 d-none">
+                                    <div class="mb-2 text-muted">
+                                        <i class="bi bi-person-x fs-1"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark">No Registered Users</h6>
+                                    <p class="text-muted small mb-0">User accounts will be listed here.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Live JDBC Product Statistics (Rubric Demonstration) -->
+                <div id="jdbc-section" class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge bg-dark px-2 py-1 small">JDBC Demonstration</span>
+                                <h5 class="fw-bold mb-0 text-dark">
+                                    <i class="bi bi-database-check text-info me-2"></i> Live JDBC Product Analytics
+                                </h5>
+                            </div>
+                            <small class="text-muted">
+                                Direct SQL execution using <code>java.sql.Connection</code>, <code>PreparedStatement</code>, and <code>ResultSet</code> via <code>GET /api/admin/jdbc/product-stats</code>
+                            </small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="input-group input-group-sm" style="max-width: 220px;">
+                                <span class="input-group-text bg-light">Min Stock:</span>
+                                <input type="number" id="jdbc-min-stock" class="form-control" value="0" min="0">
+                                <button class="btn btn-outline-primary" type="button" onclick="loadJdbcStats()">
+                                    <i class="bi bi-funnel"></i> Query
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4 pt-2">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <div class="text-muted small text-uppercase fw-semibold mb-1">Matching Products</div>
+                                    <h4 id="jdbc-total-count" class="fw-bold text-dark mb-0">Loading...</h4>
+                                    <small class="text-muted">Counted via parameterized SQL <code>?</code></small>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <div class="text-muted small text-uppercase fw-semibold mb-1">Inventory Stock Filter</div>
+                                    <h4 id="jdbc-filter-desc" class="fw-bold text-primary mb-0">Stock &gt; 0</h4>
+                                    <small class="text-muted">Evaluated in MySQL execution engine</small>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <div class="text-muted small text-uppercase fw-semibold mb-1">Database Access Layer</div>
+                                    <h4 class="fw-bold text-success mb-0">Explicit JDBC</h4>
+                                    <small class="text-muted">Resource managed via try-with-resources</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-1 fw-semibold">Online E-Commerce Platform &copy; 2026</p>
+            <p class="text-muted small mb-0">Admin Portal &bull; Built with Spring Boot 3.3.4, Java 21 &amp; MySQL</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        /**
+         * Admin Dashboard Controller logic.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            // Populate user greeting from local session cache
+            const user = Auth.getUser();
+            if (user) {
+                const adminNameElem = document.getElementById('admin-name');
+                const adminEmailElem = document.getElementById('admin-email');
+                if (adminNameElem) adminNameElem.textContent = user.name || 'Admin';
+                if (adminEmailElem) adminEmailElem.textContent = user.email || 'admin@demo.com';
+            }
+
+            // Fetch live dashboard metrics
+            loadDashboard();
+            loadJdbcStats();
+        });
+
+        /**
+         * Format currency values to Indian Rupee (₹).
+         */
+        function formatCurrency(amount) {
+            const num = Number(amount) || 0;
+            return '₹' + num.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        /**
+         * Format ISO date strings into readable locale strings.
+         */
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('en-IN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        /**
+         * Render status badges.
+         */
+        function getStatusBadge(status) {
+            switch (status) {
+                case 'PLACED':
+                    return '<span class="badge bg-primary px-2 py-1">PLACED</span>';
+                case 'CONFIRMED':
+                    return '<span class="badge bg-info text-dark px-2 py-1">CONFIRMED</span>';
+                case 'SHIPPED':
+                    return '<span class="badge bg-warning text-dark px-2 py-1">SHIPPED</span>';
+                case 'DELIVERED':
+                    return '<span class="badge bg-success px-2 py-1">DELIVERED</span>';
+                case 'CANCELLED':
+                    return '<span class="badge bg-danger px-2 py-1">CANCELLED</span>';
+                default:
+                    return `<span class="badge bg-secondary px-2 py-1">${status || 'UNKNOWN'}</span>`;
+            }
+        }
+
+        /**
+         * Render user role badges.
+         */
+        function getRoleBadge(role) {
+            switch (role) {
+                case 'ADMIN':
+                    return '<span class="badge bg-danger px-2 py-1">ADMIN</span>';
+                case 'SELLER':
+                    return '<span class="badge bg-warning text-dark px-2 py-1">SELLER</span>';
+                case 'BUYER':
+                    return '<span class="badge bg-primary px-2 py-1">BUYER</span>';
+                default:
+                    return `<span class="badge bg-secondary px-2 py-1">${role}</span>`;
+            }
+        }
+
+        /**
+         * Fetch live dashboard statistics from GET /api/admin/dashboard.
+         */
+        async function loadDashboard() {
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const dashboardContent = document.getElementById('dashboard-content');
+            const errorMessage = document.getElementById('error-message');
+
+            loadingState.classList.remove('d-none');
+            errorState.classList.add('d-none');
+            dashboardContent.classList.add('d-none');
+
+            try {
+                const data = await apiGet('/api/admin/dashboard');
+
+                // 1. Populate User Analytics
+                document.getElementById('stat-total-users').textContent = Number(data.totalUsers || 0).toLocaleString('en-IN');
+                document.getElementById('stat-total-buyers').textContent = Number(data.totalBuyers || 0).toLocaleString('en-IN');
+                document.getElementById('stat-total-sellers').textContent = Number(data.totalSellers || 0).toLocaleString('en-IN');
+                document.getElementById('stat-total-admins').textContent = Number(data.totalAdmins || 0).toLocaleString('en-IN');
+
+                // 2. Populate Catalog & Financial Metrics
+                document.getElementById('stat-total-products').textContent = Number(data.totalProducts || 0).toLocaleString('en-IN');
+                document.getElementById('stat-total-stock').textContent = Number(data.totalStock || 0).toLocaleString('en-IN');
+                document.getElementById('stat-total-orders').textContent = Number(data.totalOrders || 0).toLocaleString('en-IN');
+                document.getElementById('stat-total-amount').textContent = formatCurrency(data.totalOrderAmount);
+
+                // 3. Populate Recent Orders Table
+                renderRecentOrders(data.recentOrders);
+
+                // 4. Populate Recent Users Table
+                renderRecentUsers(data.recentUsers);
+
+                // Reveal dashboard content
+                loadingState.classList.add('d-none');
+                dashboardContent.classList.remove('d-none');
+
+            } catch (err) {
+                console.error('Failed to load admin dashboard:', err);
+                loadingState.classList.add('d-none');
+                errorState.classList.remove('d-none');
+                if (errorMessage && err.message) {
+                    errorMessage.textContent = err.message;
+                }
+            }
+        }
+
+        /**
+         * Render recent orders list.
+         */
+        function renderRecentOrders(orders) {
+            const tbody = document.getElementById('recent-orders-tbody');
+            const tableWrapper = document.getElementById('orders-table-wrapper');
+            const emptyContainer = document.getElementById('no-orders-container');
+
+            tbody.innerHTML = '';
+
+            if (!orders || orders.length === 0) {
+                tableWrapper.classList.add('d-none');
+                emptyContainer.classList.remove('d-none');
+                return;
+            }
+
+            tableWrapper.classList.remove('d-none');
+            emptyContainer.classList.add('d-none');
+
+            orders.forEach(order => {
+                const tr = document.createElement('tr');
+                const orderId = order.id || order.orderId;
+                tr.innerHTML = `
+                    <td class="ps-3 py-3 fw-bold text-dark">#${orderId}</td>
+                    <td class="py-3">
+                        <div class="fw-semibold text-dark">${order.buyerName || 'Customer'}</div>
+                        <small class="text-muted">${order.buyerEmail || ''}</small>
+                    </td>
+                    <td class="py-3 small text-muted">${formatDate(order.orderDate)}</td>
+                    <td class="py-3">${getStatusBadge(order.status)}</td>
+                    <td class="text-end pe-3 py-3 fw-bold text-dark">${formatCurrency(order.totalAmount)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /**
+         * Render recent registered users list.
+         */
+        function renderRecentUsers(users) {
+            const tbody = document.getElementById('recent-users-tbody');
+            const tableWrapper = document.getElementById('users-table-wrapper');
+            const emptyContainer = document.getElementById('no-users-container');
+
+            tbody.innerHTML = '';
+
+            if (!users || users.length === 0) {
+                tableWrapper.classList.add('d-none');
+                emptyContainer.classList.remove('d-none');
+                return;
+            }
+
+            tableWrapper.classList.remove('d-none');
+            emptyContainer.classList.add('d-none');
+
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-3 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-light border p-2 me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                <i class="bi bi-person text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">${u.name || 'User'}</div>
+                                <small class="text-muted">${u.email || ''}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3">${getRoleBadge(u.role)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /**
+         * Query explicit JDBC Product Statistics endpoint (GET /api/admin/jdbc/product-stats).
+         */
+        async function loadJdbcStats() {
+            const minStockInput = document.getElementById('jdbc-min-stock');
+            const countElem = document.getElementById('jdbc-total-count');
+            const filterElem = document.getElementById('jdbc-filter-desc');
+
+            const minStock = minStockInput ? parseInt(minStockInput.value, 10) || 0 : 0;
+            if (countElem) countElem.textContent = 'Querying...';
+
+            try {
+                const data = await apiGet(`/api/admin/jdbc/product-stats?minStock=${minStock}`);
+                if (countElem) {
+                    countElem.textContent = `${data.count} Products`;
+                }
+                if (filterElem) {
+                    filterElem.textContent = `Stock > ${data.minStockFilter}`;
+                }
+            } catch (err) {
+                console.error('Failed to query JDBC stats:', err);
+                if (countElem) countElem.textContent = 'Query Error';
+            }
+        }
+    </script>
+</body>
+</html>
