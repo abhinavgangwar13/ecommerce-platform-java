@@ -1,0 +1,16 @@
+# Server Port
+server.port=8080
+
+# MySQL Database Configuration Template (Use dedicated ecommerce_db)
+spring.datasource.url=jdbc:mysql://localhost:3306/ecommerce_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JWT Configuration Template (Provide a 256-bit secret key in environment)
+app.jwt.secret=${JWT_SECRET}
+
+# JPA / Hibernate Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true

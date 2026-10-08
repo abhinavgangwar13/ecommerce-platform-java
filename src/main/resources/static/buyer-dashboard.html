@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Dashboard - Online E-Commerce Platform</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+    <!-- Immediate Authentication Guard -->
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr) {
+                window.location.replace('login.html');
+                return;
+            }
+            try {
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'BUYER') {
+                    window.location.replace('index.html');
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="bi bi-shop me-2 text-primary fs-4"></i>
+                <span>E-Commerce Platform</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="bi bi-house me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.html">
+                            <i class="bi bi-grid me-1"></i> Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="cart.html">
+                            <i class="bi bi-cart3 me-1"></i> Cart
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.html">
+                            <i class="bi bi-bag-check me-1"></i> My Orders
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-light">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span id="nav-user-name" class="fw-semibold">Buyer</span>
+                        <span id="nav-user-role" class="badge bg-primary ms-1">BUYER</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-sm btn-outline-danger" onclick="Auth.logout()">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="py-4">
+        <div class="container">
+
+            <!-- Loading Spinner State -->
+            <div id="loading-state" class="text-center py-5">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading dashboard...</span>
+                </div>
+                <p class="mt-3 text-muted fw-semibold">Loading your shopping dashboard...</p>
+            </div>
+
+            <!-- Error Alert State -->
+            <div id="error-state" class="d-none">
+                <div class="alert alert-danger d-flex align-items-center shadow-sm p-4 rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-2 text-danger me-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="alert-heading fw-bold mb-1">Unable to Load Dashboard</h5>
+                        <p id="error-message" class="mb-0">Failed to load buyer dashboard data. Please try again later.</p>
+                    </div>
+                    <button class="btn btn-danger ms-3 px-3" onclick="loadDashboard()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Content (hidden until API data loaded) -->
+            <div id="dashboard-content" class="d-none">
+
+                <!-- Welcome Section -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
+                    <div>
+                        <h2 class="fw-bold mb-1">
+                            Welcome, <span id="welcome-user-name" class="text-primary">Buyer</span>!
+                        </h2>
+                        <p class="text-muted mb-0">Here's an overview of your shopping activity.</p>
+                    </div>
+                    <div class="d-flex gap-2 mt-3 mt-md-0">
+                        <a href="products.html" class="btn btn-primary shadow-sm">
+                            <i class="bi bi-grid me-1"></i> Browse Products
+                        </a>
+                        <a href="#" class="btn btn-outline-primary shadow-sm">
+                            <i class="bi bi-bag-check me-1"></i> View Orders
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="row g-4 mb-4">
+                    <!-- Total Orders -->
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-bag-check-fill"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Orders</h6>
+                                    <h3 id="stat-total-orders" class="fw-bold text-dark mb-0">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Items Purchased -->
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-box-seam-fill"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Items Purchased</h6>
+                                    <h3 id="stat-total-items" class="fw-bold text-dark mb-0">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Amount Spent -->
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-warning bg-opacity-10 text-warning p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-currency-rupee"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Spent</h6>
+                                    <h3 id="stat-total-spent" class="fw-bold text-dark mb-0">₹0.00</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders Section -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-clock-history text-primary me-2"></i>Recent Orders
+                            </h5>
+                            <small class="text-muted">Your latest purchase transactions</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-secondary border px-3 py-2">Latest 5 Orders</span>
+                            <a href="orders.html" class="btn btn-sm btn-outline-primary fw-semibold">
+                                <i class="bi bi-bag-check me-1"></i> View My Orders
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <!-- Table for Orders -->
+                        <div id="orders-table-wrapper" class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4 py-3">Order ID</th>
+                                        <th class="py-3">Date</th>
+                                        <th class="py-3">Status</th>
+                                        <th class="text-end pe-4 py-3">Total Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-orders-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Friendly Empty State (shown when recentOrders is empty) -->
+                        <div id="no-orders-container" class="text-center py-5 d-none">
+                            <div class="mb-3 text-muted">
+                                <i class="bi bi-cart-x fs-1"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1">No orders yet</h5>
+                            <p class="text-muted mb-3">You have not placed any orders yet. Discover our catalog and start shopping!</p>
+                            <a href="products.html" class="btn btn-primary">
+                                <i class="bi bi-grid me-1"></i> Browse Products
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-1 fw-semibold">Online E-Commerce Platform &copy; 2026</p>
+            <p class="text-muted small mb-0">Built with Spring Boot 3.3.4, Java 21, MySQL (ecommerce_db) &amp; Bootstrap</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // Date formatting helper
+        function formatDateTime(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        // Currency formatting helper (Indian Rupee)
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '₹0.00';
+            const num = Number(amount);
+            return isNaN(num) ? '₹0.00' : '₹' + num.toFixed(2);
+        }
+
+        // Status badge helper
+        function getStatusBadge(status) {
+            switch (status) {
+                case 'PLACED':
+                    return '<span class="badge bg-secondary">PLACED</span>';
+                case 'CONFIRMED':
+                    return '<span class="badge bg-primary">CONFIRMED</span>';
+                case 'SHIPPED':
+                    return '<span class="badge bg-warning text-dark">SHIPPED</span>';
+                case 'DELIVERED':
+                    return '<span class="badge bg-success">DELIVERED</span>';
+                case 'CANCELLED':
+                    return '<span class="badge bg-danger">CANCELLED</span>';
+                default:
+                    return `<span class="badge bg-light text-dark border">${status || 'UNKNOWN'}</span>`;
+            }
+        }
+
+        // Render dashboard data
+        function renderDashboard(data) {
+            // Update User Profile info
+            const displayName = data.name || (Auth.getUser() ? Auth.getUser().name : 'Buyer');
+            document.getElementById('nav-user-name').textContent = displayName;
+            document.getElementById('welcome-user-name').textContent = displayName;
+
+            // Update Statistics
+            document.getElementById('stat-total-orders').textContent = data.totalOrders !== null && data.totalOrders !== undefined ? data.totalOrders : 0;
+            document.getElementById('stat-total-items').textContent = data.totalItemsPurchased !== null && data.totalItemsPurchased !== undefined ? data.totalItemsPurchased : 0;
+            document.getElementById('stat-total-spent').textContent = formatCurrency(data.totalAmountSpent);
+
+            // Update Recent Orders
+            const ordersWrapper = document.getElementById('orders-table-wrapper');
+            const noOrdersContainer = document.getElementById('no-orders-container');
+            const ordersTbody = document.getElementById('recent-orders-tbody');
+
+            if (data.recentOrders && data.recentOrders.length > 0) {
+                ordersWrapper.classList.remove('d-none');
+                noOrdersContainer.classList.add('d-none');
+
+                ordersTbody.innerHTML = data.recentOrders.map(order => {
+                    const orderId = order.orderId ?? order.id ?? 'N/A';
+                    return `
+                        <tr>
+                            <td class="ps-4 fw-semibold">
+                                <span class="badge bg-light text-dark border me-1">#${orderId}</span>
+                            </td>
+                            <td class="text-muted small">
+                                <i class="bi bi-calendar3 me-1"></i>${formatDateTime(order.orderDate)}
+                            </td>
+                            <td>
+                                ${getStatusBadge(order.status)}
+                            </td>
+                            <td class="text-end pe-4 fw-bold text-dark">
+                                ${formatCurrency(order.totalAmount)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                ordersWrapper.classList.add('d-none');
+                noOrdersContainer.classList.remove('d-none');
+            }
+
+            // Show content, hide loaders
+            document.getElementById('loading-state').classList.add('d-none');
+            document.getElementById('error-state').classList.add('d-none');
+            document.getElementById('dashboard-content').classList.remove('d-none');
+        }
+
+        // Load dashboard via apiGet
+        async function loadDashboard() {
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const dashboardContent = document.getElementById('dashboard-content');
+
+            loadingState.classList.remove('d-none');
+            errorState.classList.add('d-none');
+            dashboardContent.classList.add('d-none');
+
+            try {
+                const response = await apiGet('/api/buyer/dashboard');
+                renderDashboard(response);
+            } catch (err) {
+                loadingState.classList.add('d-none');
+                dashboardContent.classList.add('d-none');
+                errorState.classList.remove('d-none');
+
+                if (err.status === 401 || err.status === 403) {
+                    Auth.clearAuth();
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                const errorMsg = document.getElementById('error-message');
+                errorMsg.textContent = err.message || 'Failed to load your shopping dashboard. Please check your connection.';
+            }
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Populate initial user info from localStorage if available
+            const user = Auth.getUser();
+            if (user && user.name) {
+                document.getElementById('nav-user-name').textContent = user.name;
+                document.getElementById('welcome-user-name').textContent = user.name;
+            }
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>

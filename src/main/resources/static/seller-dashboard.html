@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Dashboard - Online E-Commerce Platform</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+    <!-- Immediate Authentication Guard for SELLER role -->
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr) {
+                window.location.replace('login.html');
+                return;
+            }
+            try {
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'SELLER') {
+                    window.location.replace('index.html');
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="bi bi-shop me-2 text-warning fs-4"></i>
+                <span>E-Commerce Platform</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="seller-dashboard.html">
+                            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="seller-products.html">
+                            <i class="bi bi-box-seam me-1"></i> Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="seller-orders.html">
+                            <i class="bi bi-receipt me-1"></i> Orders
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-light">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span id="nav-user-name" class="fw-semibold">Seller</span>
+                        <span id="nav-user-role" class="badge bg-warning text-dark ms-1">SELLER</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-sm btn-outline-danger" onclick="Auth.logout()">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="py-4">
+        <div class="container">
+
+            <!-- Loading Spinner State -->
+            <div id="loading-state" class="text-center py-5">
+                <div class="spinner-border text-primary" style="width: 3.5rem; height: 3.5rem;" role="status">
+                    <span class="visually-hidden">Loading dashboard...</span>
+                </div>
+                <p class="mt-3 text-muted fw-semibold">Loading your merchant dashboard...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="text-center py-5 d-none">
+                <div class="card border-0 shadow-sm rounded-4 p-5 mx-auto" style="max-width: 520px;">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 3.5rem;"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">Unable to Load Dashboard</h5>
+                    <p id="error-message" class="text-muted mb-4">An error occurred while fetching your seller dashboard data.</p>
+                    <div>
+                        <button class="btn btn-primary px-4 py-2 fw-semibold" onclick="loadSellerDashboard()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content Container -->
+            <div id="dashboard-content" class="d-none">
+
+                <!-- Seller Profile / Welcome Header -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-warning bg-opacity-25 text-warning p-3 me-3 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
+                                    <i class="bi bi-shop fs-2 text-dark"></i>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-1 text-dark">
+                                        Welcome, <span id="seller-name">Seller</span>!
+                                    </h3>
+                                    <div class="text-muted small d-flex flex-wrap align-items-center gap-2">
+                                        <span><i class="bi bi-envelope me-1"></i><span id="seller-email">-</span></span>
+                                        <span>•</span>
+                                        <span><i class="bi bi-shield-check me-1"></i>Role: <span id="seller-role-badge" class="badge bg-warning text-dark">SELLER</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge bg-light text-secondary border px-3 py-2 fw-semibold">
+                                    <i class="bi bi-patch-check text-primary me-1"></i>Seller Portal
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4 Statistics Summary Cards -->
+                <div class="row g-4 mb-4">
+                    <!-- Total Products -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-box-seam-fill"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Products</h6>
+                                    <h3 id="stat-total-products" class="fw-bold text-dark mb-0">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Stock -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-stack"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Stock</h6>
+                                    <h3 id="stat-total-stock" class="fw-bold text-dark mb-0">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Orders -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-receipt"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Orders</h6>
+                                    <h3 id="stat-total-orders" class="fw-bold text-dark mb-0">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Sales Amount -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-4 d-flex align-items-center">
+                                <div class="rounded-3 bg-warning bg-opacity-10 text-warning p-3 me-3 fs-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="bi bi-currency-rupee"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Total Sales</h6>
+                                    <h3 id="stat-total-sales" class="fw-bold text-dark mb-0">₹0.00</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seller Products Section -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4" id="products-section">
+                    <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-boxes text-primary me-2"></i>My Products
+                            </h5>
+                            <small class="text-muted">Products currently published under your seller account</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-secondary border px-3 py-2" id="products-count-badge">0 Products</span>
+                            <a href="seller-products.html" class="btn btn-sm btn-primary">
+                                <i class="bi bi-gear me-1"></i> Manage Products
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadSellerDashboard()" title="Refresh Dashboard">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <!-- Table for Products -->
+                        <div id="products-table-wrapper" class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4 py-3">Product Name</th>
+                                        <th class="py-3">Category</th>
+                                        <th class="py-3">Price</th>
+                                        <th class="py-3">Stock</th>
+                                        <th class="pe-4 py-3 text-end">Inventory Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="seller-products-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Friendly Empty State (shown when products is empty) -->
+                        <div id="no-products-container" class="text-center py-5 d-none">
+                            <div class="mb-3 text-muted">
+                                <i class="bi bi-box2 display-3 text-secondary opacity-75"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1">No products added yet</h5>
+                            <p class="text-muted mb-0">You have not published any products in your inventory yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-1 fw-semibold">Online E-Commerce Platform &copy; 2026</p>
+            <p class="text-muted small mb-0">Built with Spring Boot 3.3.4, Java 21, MySQL (ecommerce_db) &amp; Bootstrap</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // Currency formatting helper (Indian Rupee)
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '₹0.00';
+            const num = Number(amount);
+            if (isNaN(num)) return '₹0.00';
+            return '₹' + num.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Inventory status badge helper
+        function getStockBadge(stock) {
+            const count = Number(stock) || 0;
+            if (count > 5) {
+                return '<span class="badge bg-success-subtle text-success border border-success">In Stock</span>';
+            } else if (count > 0) {
+                return `<span class="badge bg-warning-subtle text-warning border border-warning">Low Stock (${count})</span>`;
+            } else {
+                return '<span class="badge bg-danger-subtle text-danger border border-danger">Out of Stock</span>';
+            }
+        }
+
+        // Fetch seller dashboard from GET /api/seller/dashboard
+        async function loadSellerDashboard() {
+            // UI state: show loading spinner
+            document.getElementById('loading-state').classList.remove('d-none');
+            document.getElementById('error-state').classList.add('d-none');
+            document.getElementById('dashboard-content').classList.add('d-none');
+
+            try {
+                const data = await apiGet('/api/seller/dashboard');
+                renderDashboard(data);
+
+                document.getElementById('loading-state').classList.add('d-none');
+                document.getElementById('dashboard-content').classList.remove('d-none');
+            } catch (err) {
+                document.getElementById('loading-state').classList.add('d-none');
+
+                // Unauthorized / Forbidden: clear auth and redirect to login
+                if (err.status === 401 || err.status === 403) {
+                    Auth.clearAuth();
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                document.getElementById('error-message').textContent =
+                    err.message || 'Unable to load seller dashboard. Please try again.';
+                document.getElementById('error-state').classList.remove('d-none');
+            }
+        }
+
+        // Populate dashboard components with retrieved data
+        function renderDashboard(data) {
+            // 1. Seller Information
+            const sellerName = data.name || 'Seller';
+            document.getElementById('seller-name').textContent = sellerName;
+            document.getElementById('seller-email').textContent = data.email || 'N/A';
+            document.getElementById('seller-role-badge').textContent = data.role || 'SELLER';
+
+            const navName = document.getElementById('nav-user-name');
+            if (navName) navName.textContent = sellerName;
+
+            // 2. Summary Statistics
+            document.getElementById('stat-total-products').textContent = (data.totalProducts ?? 0).toLocaleString();
+            document.getElementById('stat-total-stock').textContent = (data.totalStock ?? 0).toLocaleString();
+            document.getElementById('stat-total-orders').textContent = (data.totalOrders ?? 0).toLocaleString();
+            document.getElementById('stat-total-sales').textContent = formatCurrency(data.totalSalesAmount);
+
+            // 3. Seller's Own Products List
+            const products = Array.isArray(data.products) ? data.products : [];
+            const countBadge = document.getElementById('products-count-badge');
+            countBadge.textContent = `${products.length} ${products.length === 1 ? 'Product' : 'Products'}`;
+
+            const tbody = document.getElementById('seller-products-tbody');
+            const tableWrapper = document.getElementById('products-table-wrapper');
+            const noProductsContainer = document.getElementById('no-products-container');
+
+            if (products.length > 0) {
+                tableWrapper.classList.remove('d-none');
+                noProductsContainer.classList.add('d-none');
+
+                tbody.innerHTML = products.map(product => {
+                    const prodId = product.productId ?? product.id ?? 'N/A';
+                    const imgHtml = product.imageUrl
+                        ? `<img src="${product.imageUrl}" alt="${product.name}" class="rounded border me-2" style="width: 44px; height: 44px; object-fit: cover;" onerror="this.onerror=null; this.src='https://placehold.co/44x44?text=Product';">`
+                        : `<div class="rounded border bg-light d-inline-flex align-items-center justify-content-center me-2 text-secondary" style="width: 44px; height: 44px;"><i class="bi bi-box"></i></div>`;
+
+                    return `
+                        <tr>
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    ${imgHtml}
+                                    <div>
+                                        <div class="fw-semibold text-dark">${product.name || 'Unnamed Product'}</div>
+                                        <small class="text-muted">ID: #${prodId}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <span class="badge bg-light text-dark border">
+                                    ${product.category || 'General'}
+                                </span>
+                            </td>
+                            <td class="py-3 fw-bold text-dark">
+                                ${formatCurrency(product.price)}
+                            </td>
+                            <td class="py-3">
+                                <span class="fw-semibold text-dark">${(product.stockQuantity ?? 0).toLocaleString()} units</span>
+                            </td>
+                            <td class="pe-4 py-3 text-end">
+                                ${getStockBadge(product.stockQuantity)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tableWrapper.classList.add('d-none');
+                noProductsContainer.classList.remove('d-none');
+            }
+        }
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = Auth.getUser();
+            if (user) {
+                const navName = document.getElementById('nav-user-name');
+                if (navName) navName.textContent = user.name || user.email;
+            }
+
+            loadSellerDashboard();
+        });
+    </script>
+</body>
+</html>

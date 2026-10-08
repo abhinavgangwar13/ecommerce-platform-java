@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Online E-Commerce Platform</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+    <!-- Immediate Authentication Guard -->
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr) {
+                window.location.replace('login.html');
+                return;
+            }
+            try {
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'BUYER') {
+                    window.location.replace('index.html');
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="bi bi-shop me-2 text-primary fs-4"></i>
+                <span>E-Commerce Platform</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="bi bi-house me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.html">
+                            <i class="bi bi-grid me-1"></i> Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="cart.html">
+                            <i class="bi bi-cart3 me-1"></i> Cart
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.html">
+                            <i class="bi bi-bag-check me-1"></i> My Orders
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-light">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span id="nav-user-name" class="fw-semibold">Buyer</span>
+                        <span id="nav-user-role" class="badge bg-primary ms-1">BUYER</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-sm btn-outline-danger" onclick="Auth.logout()">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="py-4">
+        <div class="container">
+
+            <!-- Page Title Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
+                <div>
+                    <h2 class="fw-bold mb-1">
+                        <i class="bi bi-credit-card-2-front text-primary me-2"></i>Checkout
+                    </h2>
+                    <p class="text-muted mb-0">Review your order details and confirm your purchase.</p>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <a href="cart.html" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Return to Cart
+                    </a>
+                </div>
+            </div>
+
+            <!-- Loading Spinner State -->
+            <div id="loading-state" class="text-center py-5">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading checkout details...</span>
+                </div>
+                <p class="mt-3 text-muted fw-semibold">Loading your order details...</p>
+            </div>
+
+            <!-- Error Alert State (Data Load Failure) -->
+            <div id="load-error-state" class="d-none mb-4">
+                <div class="alert alert-danger d-flex align-items-center shadow-sm p-4 rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-2 text-danger me-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="alert-heading fw-bold mb-1">Unable to Load Checkout</h5>
+                        <p id="load-error-message" class="mb-0">Failed to load order details. Please try again later.</p>
+                    </div>
+                    <button class="btn btn-danger ms-3 px-3" onclick="loadCheckout()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty Cart Notice State -->
+            <div id="empty-cart-state" class="text-center py-5 d-none">
+                <div class="mb-3 text-muted">
+                    <i class="bi bi-cart-x fs-1 text-secondary opacity-50" style="font-size: 4rem;"></i>
+                </div>
+                <h4 class="fw-bold text-dark mb-2">Your cart is empty.</h4>
+                <p class="text-muted mb-4">You need items in your cart before you can proceed to checkout.</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="products.html" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-grid me-1"></i> Browse Products
+                    </a>
+                    <a href="cart.html" class="btn btn-outline-secondary px-4">
+                        <i class="bi bi-cart3 me-1"></i> View Cart
+                    </a>
+                </div>
+            </div>
+
+            <!-- Checkout Review & Placement Content -->
+            <div id="checkout-content" class="row g-4 d-none">
+
+                <!-- Left Column: Order Items Review + Customer Info -->
+                <div class="col-12 col-lg-8">
+
+                    <!-- Order Items Review Card -->
+                    <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-bag-check me-2 text-primary"></i>Items in Your Order
+                            </h5>
+                            <span class="badge bg-light text-muted border px-2 py-1">
+                                <span id="checkout-items-count">0</span> items
+                            </span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3 py-3" style="min-width: 220px;">Product</th>
+                                            <th class="py-3 text-center" style="min-width: 80px;">Qty</th>
+                                            <th class="py-3 text-end" style="min-width: 100px;">Price</th>
+                                            <th class="pe-3 py-3 text-end" style="min-width: 110px;">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="checkout-items-tbody">
+                                        <!-- Dynamically generated item rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer & Delivery Summary Card -->
+                    <div class="card border-0 shadow-sm rounded-3">
+                        <div class="card-header bg-white py-3 border-0">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-person-badge me-2 text-primary"></i>Customer &amp; Delivery Information
+                            </h5>
+                        </div>
+                        <div class="card-body p-4 pt-2">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 h-100">
+                                        <small class="text-muted d-block text-uppercase fw-semibold mb-1">Buyer Details</small>
+                                        <div class="fw-bold text-dark fs-6" id="buyer-info-name">Buyer User</div>
+                                        <div class="text-muted small" id="buyer-info-email">buyer@demo.com</div>
+                                        <span class="badge bg-primary-subtle text-primary mt-2">Verified Buyer</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 h-100">
+                                        <small class="text-muted d-block text-uppercase fw-semibold mb-1">Fulfillment &amp; Payment</small>
+                                        <div class="fw-bold text-dark fs-6">Standard Delivery</div>
+                                        <div class="text-muted small">College Demo / Cash On Delivery</div>
+                                        <span class="badge bg-success-subtle text-success mt-2">Free Delivery Included</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Payment & Place Order Sidebar -->
+                <div class="col-12 col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-3 position-sticky" style="top: 20px;">
+                        <div class="card-header bg-white py-3 border-0">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-receipt me-2 text-primary"></i>Payment Summary
+                            </h5>
+                        </div>
+                        <div class="card-body p-4 pt-2">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Items Total:</span>
+                                <span class="fw-semibold text-dark" id="summary-items-total">₹0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Delivery Charges:</span>
+                                <span class="fw-bold text-success">FREE</span>
+                            </div>
+                            <hr class="my-3">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <span class="fs-5 fw-bold text-dark">Total Payable:</span>
+                                <span class="fs-3 fw-bold text-primary" id="summary-payable-amount">₹0.00</span>
+                            </div>
+
+                            <!-- Error Alert (Displayed on Place Order Failure) -->
+                            <div id="place-order-error" class="alert alert-danger py-2 px-3 small mb-3 d-none" role="alert">
+                                <i class="bi bi-exclamation-circle-fill me-1"></i>
+                                <span id="place-order-error-message">Unable to place order.</span>
+                            </div>
+
+                            <!-- Place Order Button -->
+                            <div class="d-grid gap-2">
+                                <button id="btn-place-order" class="btn btn-success btn-lg py-3 fw-bold shadow-sm" onclick="handlePlaceOrder()">
+                                    <i class="bi bi-bag-check-fill me-2"></i> Place Order
+                                </button>
+                            </div>
+
+                            <div class="text-center mt-3 text-muted small">
+                                <i class="bi bi-shield-lock-fill me-1 text-success"></i>
+                                Safe &amp; Secure Checkout
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Order Success Confirmation State -->
+            <div id="order-success-state" class="d-none">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-md-9 col-lg-7">
+                        <div class="card border-0 shadow rounded-4 text-center p-4 p-md-5">
+                            <div class="mb-3 text-success">
+                                <i class="bi bi-check-circle-fill" style="font-size: 4.5rem;"></i>
+                            </div>
+                            <h2 class="fw-bold text-dark mb-2">Order Placed Successfully!</h2>
+                            <p class="text-muted mb-4">
+                                Thank you for your purchase. Your order has been placed and confirmed in the system.
+                            </p>
+
+                            <!-- Order Details Box -->
+                            <div class="bg-light rounded-3 p-4 mb-4 text-start">
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <small class="text-muted d-block text-uppercase fw-semibold">Order ID</small>
+                                        <span class="fs-5 fw-bold text-dark" id="success-order-id">#---</span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-muted d-block text-uppercase fw-semibold">Status</small>
+                                        <span class="badge bg-success fs-6" id="success-order-status">PLACED</span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-muted d-block text-uppercase fw-semibold">Order Date</small>
+                                        <span class="fw-semibold text-dark" id="success-order-date">---</span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-muted d-block text-uppercase fw-semibold">Total Amount</small>
+                                        <span class="fs-5 fw-bold text-primary" id="success-order-total">₹0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Items Summary in Confirmation -->
+                            <div class="text-start mb-4">
+                                <h6 class="fw-bold text-dark mb-2">
+                                    <i class="bi bi-box-seam me-1 text-primary"></i>Items Ordered (<span id="success-items-count">0</span>)
+                                </h6>
+                                <div class="list-group list-group-flush rounded-3 border" id="success-items-list">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Next Actions -->
+                            <div class="d-flex flex-wrap justify-content-center gap-3">
+                                <a href="orders.html" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm">
+                                    <i class="bi bi-bag-check me-1"></i> View My Orders
+                                </a>
+                                <a href="products.html" class="btn btn-outline-primary px-4 py-2 fw-semibold">
+                                    <i class="bi bi-grid me-1"></i> Continue Shopping
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-1 fw-semibold">Online E-Commerce Platform &copy; 2026</p>
+            <p class="text-muted small mb-0">Built with Spring Boot 3.3.4, Java 21, MySQL (ecommerce_db) &amp; Bootstrap</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // State variables
+        let currentCart = null;
+        let isPlacingOrder = false;
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Format Currency in Indian Rupees (₹)
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '₹0.00';
+            const num = Number(amount);
+            if (isNaN(num)) return '₹0.00';
+            return '₹' + num.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Format Date/Time
+        function formatDateTime(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        // Render Checkout details from current cart
+        function renderCheckout(cartData) {
+            currentCart = cartData;
+
+            const loadingState = document.getElementById('loading-state');
+            const loadErrorState = document.getElementById('load-error-state');
+            const emptyCartState = document.getElementById('empty-cart-state');
+            const checkoutContent = document.getElementById('checkout-content');
+
+            loadingState.classList.add('d-none');
+            loadErrorState.classList.add('d-none');
+
+            // If cart is empty, show empty notice
+            if (!cartData || !cartData.items || cartData.items.length === 0) {
+                emptyCartState.classList.remove('d-none');
+                checkoutContent.classList.add('d-none');
+                return;
+            }
+
+            emptyCartState.classList.add('d-none');
+            checkoutContent.classList.remove('d-none');
+
+            // Populate Customer Information from stored auth profile
+            const user = Auth.getUser();
+            if (user) {
+                document.getElementById('buyer-info-name').textContent = user.name || 'Buyer';
+                document.getElementById('buyer-info-email').textContent = user.email || '';
+            }
+
+            // Populate Items Table
+            const tbody = document.getElementById('checkout-items-tbody');
+            tbody.innerHTML = cartData.items.map(item => {
+                let imgHtml = '';
+                if (item.imageUrl && item.imageUrl.trim() !== '') {
+                    imgHtml = `
+                        <img src="${escapeHtml(item.imageUrl)}" class="rounded me-3 border"
+                             style="width: 48px; height: 48px; object-fit: cover;" alt="${escapeHtml(item.productName)}"
+                             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'rounded me-3 border bg-light d-flex align-items-center justify-content-center text-muted\\' style=\\'width: 48px; height: 48px;\\'><i class=\\'bi bi-box-seam fs-4\\'></i></div>';">
+                    `;
+                } else {
+                    imgHtml = `
+                        <div class="rounded me-3 border bg-light d-flex align-items-center justify-content-center text-muted" style="width: 48px; height: 48px;">
+                            <i class="bi bi-box-seam fs-4"></i>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td class="ps-3 py-3">
+                            <div class="d-flex align-items-center">
+                                ${imgHtml}
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 250px;" title="${escapeHtml(item.productName)}">
+                                        ${escapeHtml(item.productName)}
+                                    </h6>
+                                    <small class="text-muted">Unit Price: ${formatCurrency(item.productPrice)}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="badge bg-light text-dark border px-2 py-1">× ${item.quantity}</span>
+                        </td>
+                        <td class="py-3 text-end text-muted small">
+                            ${formatCurrency(item.productPrice)}
+                        </td>
+                        <td class="pe-3 py-3 text-end fw-bold text-dark">
+                            ${formatCurrency(item.subtotal)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Totals
+            const totalCount = cartData.totalItems !== null && cartData.totalItems !== undefined ? cartData.totalItems : cartData.items.length;
+            document.getElementById('checkout-items-count').textContent = totalCount;
+            document.getElementById('summary-items-total').textContent = formatCurrency(cartData.totalAmount);
+            document.getElementById('summary-payable-amount').textContent = formatCurrency(cartData.totalAmount);
+        }
+
+        // Fetch current cart for checkout review
+        async function loadCheckout() {
+            const loadingState = document.getElementById('loading-state');
+            const loadErrorState = document.getElementById('load-error-state');
+            const emptyCartState = document.getElementById('empty-cart-state');
+            const checkoutContent = document.getElementById('checkout-content');
+
+            loadingState.classList.remove('d-none');
+            loadErrorState.classList.add('d-none');
+            emptyCartState.classList.add('d-none');
+            checkoutContent.classList.add('d-none');
+
+            try {
+                const response = await apiGet('/api/cart');
+                renderCheckout(response);
+            } catch (err) {
+                loadingState.classList.add('d-none');
+                checkoutContent.classList.add('d-none');
+
+                if (err.status === 401 || err.status === 403) {
+                    Auth.clearAuth();
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                loadErrorState.classList.remove('d-none');
+                const msgEl = document.getElementById('load-error-message');
+                msgEl.textContent = err.message || 'Failed to load your cart. Please try again.';
+            }
+        }
+
+        // Place Order Handler
+        async function handlePlaceOrder() {
+            if (isPlacingOrder) return;
+
+            const btn = document.getElementById('btn-place-order');
+            const errorContainer = document.getElementById('place-order-error');
+            const errorMsg = document.getElementById('place-order-error-message');
+
+            errorContainer.classList.add('d-none');
+
+            // Quick check
+            if (!currentCart || !currentCart.items || currentCart.items.length === 0) {
+                errorContainer.classList.remove('d-none');
+                errorMsg.textContent = 'Cannot place order. Your cart is empty.';
+                return;
+            }
+
+            // Lock button & show loading state to prevent rapid double-clicks
+            isPlacingOrder = true;
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Placing Order...`;
+
+            try {
+                // Call existing Order API: POST /api/orders (no request body needed)
+                const orderResponse = await apiPost('/api/orders');
+
+                // Render Order Confirmation
+                renderOrderSuccess(orderResponse);
+
+            } catch (err) {
+                isPlacingOrder = false;
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+
+                if (err.status === 401 || err.status === 403) {
+                    Auth.clearAuth();
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                // Show friendly error without technical stack traces
+                errorContainer.classList.remove('d-none');
+                errorMsg.textContent = err.message || 'Unable to place order. Please review your cart and try again.';
+            }
+        }
+
+        // Render Order Success Panel
+        function renderOrderSuccess(order) {
+            document.getElementById('checkout-content').classList.add('d-none');
+            const successState = document.getElementById('order-success-state');
+            successState.classList.remove('d-none');
+
+            document.getElementById('success-order-id').textContent = `#${order.id || 'N/A'}`;
+            document.getElementById('success-order-status').textContent = order.status || 'PLACED';
+            document.getElementById('success-order-date').textContent = formatDateTime(order.orderDate);
+            document.getElementById('success-order-total').textContent = formatCurrency(order.totalAmount);
+
+            const itemsCount = order.totalItems !== null && order.totalItems !== undefined
+                ? order.totalItems
+                : (order.items ? order.items.length : 0);
+            document.getElementById('success-items-count').textContent = itemsCount;
+
+            // Render Ordered Items list
+            const itemsList = document.getElementById('success-items-list');
+            if (order.items && order.items.length > 0) {
+                itemsList.innerHTML = order.items.map(item => `
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                        <div>
+                            <span class="fw-semibold text-dark">${escapeHtml(item.productName || 'Product')}</span>
+                            <span class="badge bg-light text-muted border ms-2">Qty: ${item.quantity}</span>
+                        </div>
+                        <span class="fw-bold text-dark">${formatCurrency(item.subtotal)}</span>
+                    </div>
+                `).join('');
+            } else {
+                itemsList.innerHTML = '<div class="list-group-item py-2 px-3 text-muted">Order items recorded.</div>';
+            }
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = Auth.getUser();
+            if (user && user.name) {
+                document.getElementById('nav-user-name').textContent = user.name;
+            }
+            loadCheckout();
+        });
+    </script>
+</body>
+</html>

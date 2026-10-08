@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Products - Online E-Commerce Platform</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+    <!-- Immediate Authentication Guard -->
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr) {
+                window.location.replace('login.html');
+                return;
+            }
+            try {
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'BUYER') {
+                    window.location.replace('index.html');
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="bi bi-shop me-2 text-primary fs-4"></i>
+                <span>E-Commerce Platform</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="bi bi-house me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="products.html">
+                            <i class="bi bi-grid me-1"></i> Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="cart.html">
+                            <i class="bi bi-cart3 me-1"></i> Cart
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.html">
+                            <i class="bi bi-bag-check me-1"></i> My Orders
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-light">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span id="nav-user-name" class="fw-semibold">Buyer</span>
+                        <span id="nav-user-role" class="badge bg-primary ms-1">BUYER</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-sm btn-outline-danger" onclick="Auth.logout()">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="py-4">
+        <div class="container">
+
+            <!-- Page Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
+                <div>
+                    <h2 class="fw-bold mb-1">
+                        <i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i>Product Catalog
+                    </h2>
+                    <p class="text-muted mb-0">Browse and search through available products.</p>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <a href="buyer-dashboard.html" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-speedometer2 me-1"></i> Buyer Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search, Filter & Sort Toolbar Card -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3 p-md-4">
+                    <!-- Search & Sort Row -->
+                    <div class="row g-3 align-items-center mb-3">
+                        <!-- Search Input -->
+                        <div class="col-12 col-md-6 col-lg-7">
+                            <form id="search-form" class="input-group" onsubmit="event.preventDefault(); handleSearch();">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input type="text" id="search-input" class="form-control border-start-0"
+                                       placeholder="Search products by name, description, or category..."
+                                       aria-label="Search products">
+                                <button class="btn btn-primary" type="submit">
+                                    Search
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()" title="Clear Search">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Sort Dropdown -->
+                        <div class="col-12 col-md-6 col-lg-5">
+                            <div class="d-flex align-items-center justify-content-md-end gap-2">
+                                <label for="sort-by" class="form-label mb-0 small text-muted text-nowrap fw-semibold">
+                                    <i class="bi bi-arrow-down-up me-1"></i>Sort By:
+                                </label>
+                                <select id="sort-by" class="form-select form-select-sm" style="max-width: 220px;" onchange="handleFilterChange()">
+                                    <option value="createdAt:desc" selected>Newest First</option>
+                                    <option value="price:asc">Price: Low to High</option>
+                                    <option value="price:desc">Price: High to Low</option>
+                                    <option value="name:asc">Name: A to Z</option>
+                                    <option value="name:desc">Name: Z to A</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Controls Row -->
+                    <div class="row g-3 align-items-end pt-3 border-top">
+                        <!-- Category Filter -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label for="category-filter" class="form-label small fw-semibold text-muted mb-1">
+                                <i class="bi bi-tag me-1"></i>Category
+                            </label>
+                            <select id="category-filter" class="form-select form-select-sm" onchange="handleFilterChange()">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+
+                        <!-- Price Range Filter -->
+                        <div class="col-12 col-sm-6 col-md-4">
+                            <label class="form-label small fw-semibold text-muted mb-1">
+                                <i class="bi bi-currency-rupee me-1"></i>Price Range
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" id="min-price" class="form-control" placeholder="Min ₹" min="0" step="1">
+                                <span class="input-group-text bg-light text-muted">to</span>
+                                <input type="number" id="max-price" class="form-control" placeholder="Max ₹" min="0" step="1">
+                            </div>
+                        </div>
+
+                        <!-- In-Stock Only Checkbox -->
+                        <div class="col-6 col-sm-4 col-md-2">
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" id="instock-filter" onchange="handleFilterChange()">
+                                <label class="form-check-label small fw-semibold text-dark" for="instock-filter">
+                                    In-stock only
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Apply & Reset Buttons -->
+                        <div class="col-6 col-sm-8 col-md-3 text-end d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="handleFilterChange()">
+                                <i class="bi bi-funnel me-1"></i> Apply
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetAllFilters()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation Notice Container -->
+            <div id="validation-container" class="d-none mb-3">
+                <div class="alert alert-warning alert-dismissible fade show shadow-sm py-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="validation-message"></span>
+                    <button type="button" class="btn-close" onclick="hideValidation()"></button>
+                </div>
+            </div>
+
+            <!-- Loading Spinner State -->
+            <div id="loading-state" class="text-center py-5">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading products...</span>
+                </div>
+                <p class="mt-3 text-muted fw-semibold">Loading available products...</p>
+            </div>
+
+            <!-- Error Alert State -->
+            <div id="error-state" class="d-none">
+                <div class="alert alert-danger d-flex align-items-center shadow-sm p-4 rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-2 text-danger me-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="alert-heading fw-bold mb-1">Unable to Load Products</h5>
+                        <p id="error-message" class="mb-0">Failed to load product catalog. Please try again later.</p>
+                    </div>
+                    <button class="btn btn-danger ms-3 px-3" onclick="loadProducts(currentPage)">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty State (No Products Found) -->
+            <div id="empty-state" class="text-center py-5 d-none">
+                <div class="mb-3 text-muted">
+                    <i class="bi bi-search fs-1"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">No products found.</h5>
+                <p class="text-muted small mb-3">Try adjusting your search terms or clearing some filters.</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="resetAllFilters()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                </button>
+            </div>
+
+            <!-- Product Grid -->
+            <div id="product-grid" class="row g-4 d-none">
+                <!-- Dynamically generated product cards -->
+            </div>
+
+            <!-- Pagination Bar -->
+            <nav aria-label="Product catalog navigation" id="pagination-nav" class="mt-4 pt-3 border-top d-none">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+                    <div class="text-muted small" id="pagination-info">
+                        Showing products...
+                    </div>
+                    <ul class="pagination pagination-sm mb-0" id="pagination-list">
+                        <!-- Dynamic page links -->
+                    </ul>
+                </div>
+            </nav>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-1 fw-semibold">Online E-Commerce Platform &copy; 2026</p>
+            <p class="text-muted small mb-0">Built with Spring Boot 3.3.4, Java 21, MySQL (ecommerce_db) &amp; Bootstrap</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        // State variables
+        let currentPage = 0;
+        const pageSize = 12;
+        const discoveredCategories = new Set();
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Format Currency in Indian Rupees (₹)
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '₹0.00';
+            const num = Number(amount);
+            if (isNaN(num)) return '₹0.00';
+            return '₹' + num.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Validation notice helpers
+        function showValidation(message) {
+            const container = document.getElementById('validation-container');
+            const msgSpan = document.getElementById('validation-message');
+            msgSpan.textContent = message;
+            container.classList.remove('d-none');
+        }
+
+        function hideValidation() {
+            document.getElementById('validation-container').classList.add('d-none');
+        }
+
+        // Update Category dropdown dynamically from loaded products
+        function updateCategoryDropdown(products) {
+            let newlyAdded = false;
+            if (products && Array.isArray(products)) {
+                products.forEach(p => {
+                    if (p.category && p.category.trim() && !discoveredCategories.has(p.category.trim())) {
+                        discoveredCategories.add(p.category.trim());
+                        newlyAdded = true;
+                    }
+                });
+            }
+
+            if (newlyAdded) {
+                const select = document.getElementById('category-filter');
+                const selectedVal = select.value;
+                const sortedList = Array.from(discoveredCategories).sort();
+
+                select.innerHTML = '<option value="">All Categories</option>' +
+                    sortedList.map(cat => `<option value="${escapeHtml(cat)}" ${cat === selectedVal ? 'selected' : ''}>${escapeHtml(cat)}</option>`).join('');
+            }
+        }
+
+        // Build URL query string from UI inputs
+        function buildQueryString(page = 0) {
+            const params = new URLSearchParams();
+            params.set('page', page);
+            params.set('size', pageSize);
+
+            // Search
+            const searchVal = document.getElementById('search-input').value.trim();
+            if (searchVal) {
+                params.set('search', searchVal);
+            }
+
+            // Category
+            const categoryVal = document.getElementById('category-filter').value.trim();
+            if (categoryVal) {
+                params.set('category', categoryVal);
+            }
+
+            // Price range
+            const minPriceVal = document.getElementById('min-price').value.trim();
+            const maxPriceVal = document.getElementById('max-price').value.trim();
+
+            if (minPriceVal !== '') {
+                const min = Number(minPriceVal);
+                if (!isNaN(min) && min >= 0) {
+                    params.set('minPrice', min);
+                }
+            }
+
+            if (maxPriceVal !== '') {
+                const max = Number(maxPriceVal);
+                if (!isNaN(max) && max >= 0) {
+                    params.set('maxPrice', max);
+                }
+            }
+
+            // In Stock
+            const inStock = document.getElementById('instock-filter').checked;
+            if (inStock) {
+                params.set('inStock', 'true');
+            }
+
+            // Sort By & Direction
+            const sortVal = document.getElementById('sort-by').value;
+            const [sortBy, direction] = sortVal.split(':');
+            if (sortBy) params.set('sortBy', sortBy);
+            if (direction) params.set('direction', direction);
+
+            return params.toString();
+        }
+
+        // Render Product Card
+        function createProductCard(product) {
+            const hasStock = product.stockQuantity !== null && product.stockQuantity > 0;
+            const stockBadgeClass = hasStock ? 'bg-success text-white' : 'bg-danger text-white';
+            const stockBadgeText = hasStock ? `In Stock (${product.stockQuantity})` : 'Out of Stock';
+
+            // Image handling with fallback placeholder
+            let imageHtml = '';
+            if (product.imageUrl && product.imageUrl.trim() !== '') {
+                imageHtml = `
+                    <img src="${escapeHtml(product.imageUrl)}" class="card-img-top product-img" alt="${escapeHtml(product.name)}"
+                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'product-img-placeholder d-flex align-items-center justify-content-center bg-light text-muted w-100 h-100\\'><i class=\\'bi bi-box-seam fs-1 text-secondary opacity-50\\'></i></div>';">
+                `;
+            } else {
+                imageHtml = `
+                    <div class="product-img-placeholder d-flex align-items-center justify-content-center bg-light text-muted w-100 h-100">
+                        <i class="bi bi-box-seam fs-1 text-secondary opacity-50"></i>
+                    </div>
+                `;
+            }
+
+            // Seller attribution
+            let sellerHtml = '';
+            if (product.sellerName) {
+                sellerHtml = `
+                    <div class="small text-muted mb-2">
+                        <i class="bi bi-shop me-1 text-secondary"></i>Sold by: <span class="fw-semibold text-dark">${escapeHtml(product.sellerName)}</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card product-card h-100 shadow-sm border-0">
+                        <div class="product-img-wrapper position-relative">
+                            ${imageHtml}
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75">
+                                ${escapeHtml(product.category || 'General')}
+                            </span>
+                            <span class="position-absolute top-0 end-0 m-2 badge ${stockBadgeClass}">
+                                ${stockBadgeText}
+                            </span>
+                        </div>
+                        <div class="card-body p-3 d-flex flex-column">
+                            <h6 class="card-title fw-bold text-truncate mb-1" title="${escapeHtml(product.name)}">
+                                ${escapeHtml(product.name)}
+                            </h6>
+                            <p class="card-text text-muted small product-desc mb-2">
+                                ${escapeHtml(product.description || 'No description available.')}
+                            </p>
+                            ${sellerHtml}
+                            <div class="mt-auto pt-2 border-top d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted small d-block">Price</span>
+                                    <span class="fw-bold text-dark fs-5">${formatCurrency(product.price)}</span>
+                                </div>
+                            </div>
+                            ${hasStock ? `
+                                <button class="btn btn-sm btn-primary w-100 mt-2" onclick="handleAddToCart(${product.id}, this)">
+                                    <i class="bi bi-cart-plus me-1"></i> Add to Cart
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>
+                                    <i class="bi bi-x-circle me-1"></i> Out of Stock
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render Pagination Controls
+        function renderPagination(pageData) {
+            const nav = document.getElementById('pagination-nav');
+            const info = document.getElementById('pagination-info');
+            const list = document.getElementById('pagination-list');
+
+            if (pageData.totalPages <= 1) {
+                if (pageData.totalElements > 0) {
+                    nav.classList.remove('d-none');
+                    info.textContent = `Showing all ${pageData.totalElements} product${pageData.totalElements === 1 ? '' : 's'}`;
+                    list.innerHTML = '';
+                } else {
+                    nav.classList.add('d-none');
+                }
+                return;
+            }
+
+            nav.classList.remove('d-none');
+            const startIdx = pageData.page * pageData.size + 1;
+            const endIdx = Math.min((pageData.page + 1) * pageData.size, pageData.totalElements);
+            info.textContent = `Showing ${startIdx}–${endIdx} of ${pageData.totalElements} products`;
+
+            let html = '';
+
+            // Previous Button
+            const prevDisabled = pageData.page === 0 ? 'disabled' : '';
+            html += `
+                <li class="page-item ${prevDisabled}">
+                    <button class="page-link" onclick="goToPage(${pageData.page - 1})" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </button>
+                </li>
+            `;
+
+            // Page Number Buttons
+            for (let i = 0; i < pageData.totalPages; i++) {
+                if (i === 0 || i === pageData.totalPages - 1 || (i >= pageData.page - 1 && i <= pageData.page + 1)) {
+                    const active = i === pageData.page ? 'active' : '';
+                    html += `
+                        <li class="page-item ${active}">
+                            <button class="page-link" onclick="goToPage(${i})">${i + 1}</button>
+                        </li>
+                    `;
+                } else if (i === pageData.page - 2 || i === pageData.page + 2) {
+                    html += `<li class="page-item disabled"><span class="page-link">&hellip;</span></li>`;
+                }
+            }
+
+            // Next Button
+            const nextDisabled = (pageData.page >= pageData.totalPages - 1 || pageData.last) ? 'disabled' : '';
+            html += `
+                <li class="page-item ${nextDisabled}">
+                    <button class="page-link" onclick="goToPage(${pageData.page + 1})" aria-label="Next">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </li>
+            `;
+
+            list.innerHTML = html;
+        }
+
+        // Fetch products from backend API
+        async function loadProducts(page = 0) {
+            hideValidation();
+
+            // Validate price range if entered
+            const minPriceVal = document.getElementById('min-price').value.trim();
+            const maxPriceVal = document.getElementById('max-price').value.trim();
+            if (minPriceVal !== '' && maxPriceVal !== '') {
+                const min = Number(minPriceVal);
+                const max = Number(maxPriceVal);
+                if (min > max) {
+                    showValidation('Minimum price cannot be greater than maximum price.');
+                    return;
+                }
+            }
+
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const emptyState = document.getElementById('empty-state');
+            const productGrid = document.getElementById('product-grid');
+            const paginationNav = document.getElementById('pagination-nav');
+
+            loadingState.classList.remove('d-none');
+            errorState.classList.add('d-none');
+            emptyState.classList.add('d-none');
+            productGrid.classList.add('d-none');
+            paginationNav.classList.add('d-none');
+
+            try {
+                const queryString = buildQueryString(page);
+                const response = await apiGet(`/api/products?${queryString}`);
+
+                currentPage = response.page;
+                updateCategoryDropdown(response.content);
+
+                loadingState.classList.add('d-none');
+
+                if (!response.content || response.content.length === 0) {
+                    emptyState.classList.remove('d-none');
+                    productGrid.innerHTML = '';
+                    renderPagination(response);
+                    return;
+                }
+
+                // Render products
+                productGrid.innerHTML = response.content.map(createProductCard).join('');
+                productGrid.classList.remove('d-none');
+
+                // Render pagination
+                renderPagination(response);
+
+            } catch (err) {
+                loadingState.classList.add('d-none');
+                productGrid.classList.add('d-none');
+                paginationNav.classList.add('d-none');
+
+                if (err.status === 401 || err.status === 403) {
+                    Auth.clearAuth();
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                errorState.classList.remove('d-none');
+                const errorMsg = document.getElementById('error-message');
+                errorMsg.textContent = err.message || 'Failed to load products. Please check your connection.';
+            }
+        }
+
+        // Navigation handler
+        function goToPage(page) {
+            if (page < 0) return;
+            loadProducts(page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Search trigger
+        function handleSearch() {
+            currentPage = 0;
+            loadProducts(0);
+        }
+
+        // Clear search input
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            currentPage = 0;
+            loadProducts(0);
+        }
+
+        // Filter / Sort change trigger
+        function handleFilterChange() {
+            currentPage = 0;
+            loadProducts(0);
+        }
+
+        // Reset all filters to default
+        function resetAllFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('category-filter').value = '';
+            document.getElementById('min-price').value = '';
+            document.getElementById('max-price').value = '';
+            document.getElementById('instock-filter').checked = false;
+            document.getElementById('sort-by').value = 'createdAt:desc';
+            hideValidation();
+            currentPage = 0;
+            loadProducts(0);
+        }
+
+        // Toast notification helper
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toastId = 'toast-' + Date.now();
+            const icon = type === 'success' ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill text-danger';
+
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center bg-white border-0 shadow-lg show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center">
+                            <i class="bi ${icon} fs-5 me-2"></i>
+                            <div class="fw-semibold text-dark">${escapeHtml(message)}</div>
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="document.getElementById('${toastId}').remove()"></button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            setTimeout(() => {
+                const el = document.getElementById(toastId);
+                if (el) el.remove();
+            }, 3500);
+        }
+
+        // Add to Cart handler
+        async function handleAddToCart(productId, btn) {
+            if (!btn || btn.disabled) return;
+
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Adding...`;
+
+            try {
+                await apiPost('/api/cart/items', {
+                    productId: productId,
+                    quantity: 1
+                });
+
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+                btn.innerHTML = `<i class="bi bi-check-lg me-1"></i>Added!`;
+
+                showToast('Product added to cart.', 'success');
+
+                setTimeout(() => {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-primary');
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }, 1200);
+
+            } catch (err) {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+
+                if (err.status === 401 || err.status === 403) {
+                    Auth.clearAuth();
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                const msg = err.message || 'Failed to add product to cart.';
+                showToast(msg, 'danger');
+            }
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = Auth.getUser();
+            if (user && user.name) {
+                document.getElementById('nav-user-name').textContent = user.name;
+            }
+            loadProducts(0);
+        });
+    </script>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;" id="toast-container"></div>
+</body>
+</html>

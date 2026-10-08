@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Online E-Commerce Platform</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- Simple Navbar -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <i class="bi bi-shop me-2 text-primary fs-4"></i>
+                <span>E-Commerce Platform</span>
+            </a>
+            <a href="index.html" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-house me-1"></i> Home
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="auth-card">
+                        <!-- Card Header -->
+                        <div class="auth-header">
+                            <i class="bi bi-person-plus display-5 mb-2"></i>
+                            <h3>Create Account</h3>
+                            <p class="text-white-50 mb-0">Join our e-commerce platform today</p>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="auth-body">
+                            <!-- Alert Message Area -->
+                            <div id="alert-container"></div>
+
+                            <form id="register-form" novalidate>
+                                <!-- Full Name Field -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">
+                                        <i class="bi bi-person me-1"></i> Full Name
+                                    </label>
+                                    <input type="text" class="form-control" id="name" name="name"
+                                           placeholder="e.g. John Doe" minlength="2" maxlength="100" required autofocus>
+                                    <div class="form-text">Between 2 and 100 characters.</div>
+                                </div>
+
+                                <!-- Email Field -->
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">
+                                        <i class="bi bi-envelope me-1"></i> Email Address
+                                    </label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           placeholder="e.g. john@example.com" required>
+                                    <div class="form-text">Must be a valid and unique email address.</div>
+                                </div>
+
+                                <!-- Password Field -->
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">
+                                        <i class="bi bi-lock me-1"></i> Password
+                                    </label>
+                                    <input type="password" class="form-control" id="password" name="password"
+                                           placeholder="At least 6 characters" minlength="6" required>
+                                    <div class="form-text">Minimum 6 characters.</div>
+                                </div>
+
+                                <!-- Role Selection Field (BUYER and SELLER only, NO ADMIN) -->
+                                <div class="mb-4">
+                                    <label for="role" class="form-label">
+                                        <i class="bi bi-person-badge me-1"></i> Account Type / Role
+                                    </label>
+                                    <select class="form-select" id="role" name="role" required>
+                                        <option value="BUYER" selected>Buyer — Browse, cart &amp; purchase items</option>
+                                        <option value="SELLER">Seller — List products, manage stock &amp; orders</option>
+                                    </select>
+                                    <div class="form-text text-muted">
+                                        <i class="bi bi-info-circle me-1"></i> Note: Administrator accounts cannot be created from the frontend.
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2 mb-3">
+                                    <button type="submit" id="btn-register" class="btn btn-primary btn-lg">
+                                        <span id="btn-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                        <span id="btn-text">Create Account</span>
+                                    </button>
+                                    <a href="index.html" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i> Back to Home
+                                    </a>
+                                </div>
+
+                                <!-- Login Link -->
+                                <div class="text-center pt-2">
+                                    <span class="text-muted">Already have an account?</span>
+                                    <a href="login.html" class="fw-semibold text-decoration-none ms-1">Sign in here</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const registerForm = document.getElementById('register-form');
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const roleSelect = document.getElementById('role');
+            const btnRegister = document.getElementById('btn-register');
+            const btnSpinner = document.getElementById('btn-spinner');
+            const btnText = document.getElementById('btn-text');
+            const alertContainer = document.getElementById('alert-container');
+
+            function showAlert(message, type = 'danger') {
+                const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+                alertContainer.innerHTML = `
+                    <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi ${icon} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            }
+
+            function clearAlert() {
+                alertContainer.innerHTML = '';
+            }
+
+            function setLoading(isLoading) {
+                if (isLoading) {
+                    btnRegister.disabled = true;
+                    btnSpinner.classList.remove('d-none');
+                    btnText.textContent = 'Creating Account...';
+                } else {
+                    btnRegister.disabled = false;
+                    btnSpinner.classList.add('d-none');
+                    btnText.textContent = 'Create Account';
+                }
+            }
+
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearAlert();
+
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                const role = roleSelect.value;
+
+                // Client-side validations
+                if (!name || name.length < 2) {
+                    showAlert('Please enter a valid name (at least 2 characters).');
+                    return;
+                }
+
+                if (!email) {
+                    showAlert('Please enter an email address.');
+                    return;
+                }
+
+                if (!password || password.length < 6) {
+                    showAlert('Password must be at least 6 characters long.');
+                    return;
+                }
+
+                // Strictly ensure ADMIN role cannot be submitted
+                if (role !== 'BUYER' && role !== 'SELLER') {
+                    showAlert('Invalid role selected. Allowed roles: BUYER or SELLER.');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    await Auth.register(name, email, password, role);
+                    showAlert('Account created successfully! Redirecting to login...', 'success');
+
+                    // Reset form and redirect to login.html
+                    registerForm.reset();
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1500);
+                } catch (err) {
+                    showAlert(err.message || 'Registration failed. Please verify your details.');
+                } finally {
+                    setLoading(false);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
